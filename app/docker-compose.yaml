@@ -1,0 +1,33 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: localdev
+      POSTGRES_DB: shortener
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  api:
+    build: .
+    ports:
+      - "5320:5320"
+    environment:
+      DATABASE_URL: postgresql://app:localdev@postgres:5432/shortener
+      REDIS_URL: redis://redis:6379
+      SQS_QUEUE_URL: ""
+      PORT: "5320"
+      BASE_URL: http://localhost:5320
+    depends_on:
+      - postgres
+      - redis
+
+volumes:
+  pgdata:

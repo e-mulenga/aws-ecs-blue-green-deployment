@@ -1,0 +1,11 @@
+# Template: .github/workflows/deploy.yml replaces the placeholders and passes this to CodeDeploy
+# inline (revisionType AppSpecContent), so no S3 revisions bucket is needed.
+version: 0.0
+Resources:
+  - TargetService:
+      Type: AWS::ECS::Service
+      Properties:
+        TaskDefinition: "<TASK_DEFINITION>"
+        LoadBalancerInfo:
+          ContainerName: "<CONTAINER_NAME>"
+          ContainerPort: <CONTAINER_PORT>

@@ -1,0 +1,24 @@
+.git
+__pycache__
+*.pyc
+.venv
+venv
+env
+node_modules
+dist
+build
+.cache
+.pytest_cache
+.mypy_cache
+.idea
+.vscode
+*.log
+.DS_Store
+
+# Windows / OneDrive junk
+desktop.ini
+Thumbs.db
+
+# local files
+.env
+.env.*

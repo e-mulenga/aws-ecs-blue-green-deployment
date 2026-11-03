@@ -1,0 +1,64 @@
+name: deploy
+# Registers a new task definition with the chosen image tag and starts a CodeDeploy blue/green deployment.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "GitHub environment (dev, stage or prod)"
+        required: true
+        default: dev
+        type: choice
+        options: [dev, stage, prod]
+      image_tag:
+        description: "Image tag in the shared ECR repository, for example url-shortener-<git sha>"
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    environment: ${{ github.event.inputs.environment }}
+    # Values come from GitHub environment variables set from `terraform output`; no account IDs in the repo.
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      ECR_REPO_URL: ${{ vars.ECR_REPO_URL }}
+      TASK_FAMILY: ${{ vars.TASK_FAMILY }}
+      CONTAINER_NAME: ${{ vars.CONTAINER_NAME }}
+      CONTAINER_PORT: ${{ vars.CONTAINER_PORT }}
+      CODEDEPLOY_APP: ${{ vars.CODEDEPLOY_APP }}
+      CODEDEPLOY_GROUP: ${{ vars.CODEDEPLOY_GROUP }}
+      IMAGE_TAG: ${{ github.event.inputs.image_tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Register task definition with the new image
+        run: |
+          aws ecs describe-task-definition --task-definition "$TASK_FAMILY" --query taskDefinition > current.json
+          jq --arg IMAGE "$ECR_REPO_URL:$IMAGE_TAG" --arg NAME "$CONTAINER_NAME" '
+            .containerDefinitions |= map(if .name == $NAME then .image = $IMAGE else . end)
+            | del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
+          ' current.json > new.json
+          ARN=$(aws ecs register-task-definition --cli-input-json file://new.json --query taskDefinition.taskDefinitionArn --output text)
+          echo "TASK_DEFINITION_ARN=$ARN" >> "$GITHUB_ENV"
+
+      - name: Start the blue/green deployment
+        run: |
+          sed -e "s|<TASK_DEFINITION>|$TASK_DEFINITION_ARN|" \
+              -e "s|<CONTAINER_NAME>|$CONTAINER_NAME|" \
+              -e "s|<CONTAINER_PORT>|$CONTAINER_PORT|" appspec.yaml > appspec.rendered.yaml
+          ID=$(aws deploy create-deployment \
+            --application-name "$CODEDEPLOY_APP" \
+            --deployment-group-name "$CODEDEPLOY_GROUP" \
+            --revision "$(jq -nc --rawfile c appspec.rendered.yaml '{revisionType:"AppSpecContent",appSpecContent:{content:$c}}')" \
+            --query deploymentId --output text)
+          echo "Deployment: $ID"
+          aws deploy wait deployment-successful --deployment-id "$ID"

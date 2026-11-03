@@ -1,0 +1,27 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  app:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r app/requirements-dev.txt
+      - run: python -m pytest -q
+        working-directory: app
+  iac:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: opentofu/setup-opentofu@v1
+      - run: tofu fmt -check -recursive infra
+      - name: Validate
+        run: |
+          tofu -chdir=infra init -backend=false -input=false
+          tofu -chdir=infra validate

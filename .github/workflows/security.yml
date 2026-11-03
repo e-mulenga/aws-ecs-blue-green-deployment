@@ -1,0 +1,35 @@
+name: security
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  iac:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aquasecurity/tfsec-action@v1.0.3
+        with: { working_directory: infra }
+      - uses: bridgecrewio/checkov-action@v12
+        with: { directory: infra, framework: terraform, quiet: true }
+  secrets:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@v2
+        env: { GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
+  python:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install bandit
+      - run: bandit -r app/src -ll
+  filesystem:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aquasecurity/trivy-action@0.28.0
+        with: { scan-type: fs, scan-ref: ., severity: "HIGH,CRITICAL", exit-code: "1" }

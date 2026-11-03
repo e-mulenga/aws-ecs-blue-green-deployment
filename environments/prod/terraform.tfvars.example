@@ -1,0 +1,21 @@
+# Copy to terraform.tfvars (git-ignored). Landing Zone values come from the Landing Zone owner.
+landing_zone_state_bucket = "<landing-zone-state-bucket>"
+landing_zone_state_key    = "<landing-zone-state-key>"
+landing_zone_state_region = "<landing-zone-state-bucket-region>"
+
+environment = "prod"
+owner       = "<owner>"
+cost_center = "<cost-center>"
+github_repo = "your-repo-name"
+
+app_subdomain          = "bluegreen" # the Landing Zone certificate must cover <app_subdomain>.<LZ domain>
+deployment_config_name = "CodeDeployDefault.ECSCanary10Percent5Minutes"
+desired_count          = 2
+enable_deletion_protection  = true
+container_insights = true
+log_retention_days = 30
+monthly_budget_usd     = 250
+enable_dynamodb_replication = true
+# dr_dynamodb_kms_key_arn  = "<cmk-in-eu-west-1>" # required with a Landing Zone CMK
+
+create_workload_endpoints = false # set to true if you want this repo to deploy the endpoints

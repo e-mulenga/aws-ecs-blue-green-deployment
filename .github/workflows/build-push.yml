@@ -1,0 +1,52 @@
+name: build-push
+# Builds the image, scans it, and pushes it to the Landing Zone shared-applications ECR repository.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "GitHub environment (dev, stage or prod)"
+        required: true
+        default: dev
+        type: choice
+        options: [dev, stage, prod]
+  push:
+    branches: [main]
+    paths: ["app/**"]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      ECR_REPO_URL: ${{ vars.ECR_REPO_URL }}   # Landing Zone shared-applications URL (terraform output image_repository)
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build
+        run: docker build -t local/url-shortener:${{ github.sha }} ./app
+
+      - name: Scan (fails on HIGH or CRITICAL)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: local/url-shortener:${{ github.sha }}
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+          ignore-unfixed: true
+
+      - name: Push
+        run: |
+          # One shared Landing Zone repository: tags carry the service name
+          docker tag local/url-shortener:${{ github.sha }} "$ECR_REPO_URL:url-shortener-${{ github.sha }}"
+          docker push "$ECR_REPO_URL:url-shortener-${{ github.sha }}"

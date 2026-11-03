@@ -1,0 +1,33 @@
+# Terraform / OpenTofu
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+*.tfplan
+crash.log
+crash.*.log
+backend.hcl
+!backend.hcl.example
+
+# Credentials and environment
+*.pem
+*.key
+.env
+.env.*
+!.env.example
+.aws/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log

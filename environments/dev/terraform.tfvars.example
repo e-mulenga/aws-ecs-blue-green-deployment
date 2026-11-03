@@ -1,0 +1,16 @@
+# Copy to terraform.tfvars (git-ignored). Landing Zone values come from the Landing Zone owner.
+landing_zone_state_bucket = "<landing-zone-state-bucket>"
+landing_zone_state_key    = "<landing-zone-state-key>"
+landing_zone_state_region = "<landing-zone-state-bucket-region>"
+
+environment = "dev"
+owner       = "<owner>"
+cost_center = "<cost-center>"
+github_repo = "your-repo-name"
+
+app_subdomain          = "bluegreen" # the Landing Zone certificate must cover <app_subdomain>.<LZ domain>
+deployment_config_name = "CodeDeployDefault.ECSAllAtOnce"
+desired_count          = 1
+monthly_budget_usd     = 25
+
+create_workload_endpoints = false # set to true if you want this repo to deploy the endpoints
